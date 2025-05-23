@@ -16,6 +16,11 @@ const dbConfig = {
     database: process.env.DB_NAME || 'school_management'
 };
 
+// Add health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', message: 'Server is running' });
+});
+
 // Function to calculate distance between two points using Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Earth's radius in kilometers
@@ -28,6 +33,12 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
 }
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something broke!' });
+});
 
 // Validation middleware for addSchool endpoint
 const validateSchool = [
@@ -132,14 +143,28 @@ async function initializeDatabase() {
         console.log('Database and table initialized successfully');
     } catch (error) {
         console.error('Error initializing database:', error);
-        process.exit(1);
+        // Don't exit process on database error in production
+        if (process.env.NODE_ENV === 'production') {
+            console.log('Continuing despite database error in production');
+        } else {
+            process.exit(1);
+        }
     }
 }
 
 // Initialize database and start server
+const PORT = process.env.PORT || 3000;
+
 initializeDatabase().then(() => {
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-        console.log(`Server is running on port ${port}`);
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on port ${PORT}`);
     });
+}).catch(error => {
+    console.error('Failed to initialize database:', error);
+    // In production, start server anyway
+    if (process.env.NODE_ENV === 'production') {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server is running on port ${PORT} (without database)`);
+        });
+    }
 }); 

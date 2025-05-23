@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "School Management API",
+    "description": "API collection for School Management System with location-based features",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Add School",
+      "request": {
+        "method": "POST",
+        "description": "Add a new school with location details",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/addSchool",
+          "host": ["{{base_url}}"],
+          "path": ["addSchool"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Example School\",\n    \"address\": \"123 Education St\",\n    \"latitude\": 12.345678,\n    \"longitude\": 98.765432\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [
+        {
+          "name": "Successful Response",
+          "originalRequest": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Example School\",\n    \"address\": \"123 Education St\",\n    \"latitude\": 12.345678,\n    \"longitude\": 98.765432\n}"
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "body": "{\n    \"message\": \"School added successfully\",\n    \"schoolId\": 1\n}"
+        },
+        {
+          "name": "Validation Error",
+          "originalRequest": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"\",\n    \"address\": \"123 Education St\",\n    \"latitude\": 100,\n    \"longitude\": 98.765432\n}"
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "body": "{\n    \"errors\": [\n        {\n            \"msg\": \"Name cannot be empty\"\n        },\n        {\n            \"msg\": \"Latitude must be between -90 and 90\"\n        }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "List Schools",
+      "request": {
+        "method": "GET",
+        "description": "Get all schools sorted by distance from provided coordinates",
+        "url": {
+          "raw": "{{base_url}}/listSchools?latitude=12.345678&longitude=98.765432",
+          "host": ["{{base_url}}"],
+          "path": ["listSchools"],
+          "query": [
+            {
+              "key": "latitude",
+              "value": "12.345678",
+              "description": "User's latitude (-90 to 90)"
+            },
+            {
+              "key": "longitude",
+              "value": "98.765432",
+              "description": "User's longitude (-180 to 180)"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "Successful Response",
+          "originalRequest": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/listSchools?latitude=12.345678&longitude=98.765432"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"Example School\",\n        \"address\": \"123 Education St\",\n        \"latitude\": 12.345678,\n        \"longitude\": 98.765432,\n        \"distance\": 0\n    },\n    {\n        \"id\": 2,\n        \"name\": \"Another School\",\n        \"address\": \"456 Learning Ave\",\n        \"latitude\": 12.355678,\n        \"longitude\": 98.775432,\n        \"distance\": 2.5\n    }\n]"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Base URL for the API"
+    }
+  ]
+} 

@@ -2,19 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { body, validationResult, query } = require('express-validator');
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database connection configuration
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
+// PostgreSQL connection configuration
+const pool = new Pool({
+    host: process.env.DB_HOST ,
+    port: process.env.DB_PORT ,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER ,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'school_management'
-};
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
 // Add health check endpoint for Render
 app.get('/health', (req, res) => {
@@ -57,18 +61,14 @@ app.post('/addSchool', validateSchool, async (req, res) => {
         }
 
         const { name, address, latitude, longitude } = req.body;
-        const connection = await mysql.createConnection(dbConfig);
-
-        const [result] = await connection.execute(
-            'INSERT INTO schools (name, address, latitude, longitude) VALUES (?, ?, ?, ?)',
+        const result = await pool.query(
+            'INSERT INTO schools (name, address, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id',
             [name, address, latitude, longitude]
         );
 
-        await connection.end();
-
         res.status(201).json({
             message: 'School added successfully',
-            schoolId: result.insertId
+            schoolId: result.rows[0].id
         });
     } catch (error) {
         console.error('Error adding school:', error);
@@ -88,10 +88,8 @@ app.get('/listSchools', [
         }
 
         const { latitude, longitude } = req.query;
-        const connection = await mysql.createConnection(dbConfig);
-
-        const [schools] = await connection.execute('SELECT * FROM schools');
-        await connection.end();
+        const result = await pool.query('SELECT * FROM schools');
+        const schools = result.rows;
 
         // Calculate distances and sort schools
         const schoolsWithDistance = schools.map(school => ({
@@ -113,24 +111,12 @@ app.get('/listSchools', [
     }
 });
 
-// Create database and table if they don't exist
+// Create database table if it doesn't exist
 async function initializeDatabase() {
     try {
-        // First connect without database selected
-        const connection = await mysql.createConnection({
-            host: dbConfig.host,
-            user: dbConfig.user,
-            password: dbConfig.password
-        });
-
-        // Create database if it doesn't exist
-        await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-        await connection.query(`USE ${dbConfig.database}`);
-
-        // Create schools table
-        await connection.query(`
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS schools (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 address VARCHAR(255) NOT NULL,
                 latitude FLOAT NOT NULL,
@@ -139,11 +125,9 @@ async function initializeDatabase() {
             )
         `);
 
-        await connection.end();
-        console.log('Database and table initialized successfully');
+        console.log('Database table initialized successfully');
     } catch (error) {
         console.error('Error initializing database:', error);
-        // Don't exit process on database error in production
         if (process.env.NODE_ENV === 'production') {
             console.log('Continuing despite database error in production');
         } else {
@@ -161,7 +145,6 @@ initializeDatabase().then(() => {
     });
 }).catch(error => {
     console.error('Failed to initialize database:', error);
-    // In production, start server anyway
     if (process.env.NODE_ENV === 'production') {
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server is running on port ${PORT} (without database)`);

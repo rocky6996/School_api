@@ -46,29 +46,7 @@ This Node.js API provides endpoints to manage school data with location-based so
 
 ## Deployment Guide
 
-### Deploying to Heroku
-
-1. Create a Heroku account and install Heroku CLI
-2. Login to Heroku:
-   ```bash
-   heroku login
-   ```
-
-3. Create a new Heroku app:
-   ```bash
-   heroku create your-app-name
-   ```
-
-4. Add MySQL addon:
-   ```bash
-   heroku addons:create jawsdb:kitefin
-   ```
-
-5. Push to Heroku:
-   ```bash
-   git push heroku main
-   ```
-
+s
 ### Environment Variables
 
 Set the following environment variables in your hosting platform:
